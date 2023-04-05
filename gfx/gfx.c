@@ -1,8 +1,8 @@
 #include "pico/stdlib.h"
-#include "stdio.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include "stdarg.h"
 #include "string.h"
-
 #include "gfx.h"
 #include "font.h"
 #include "gfxfont.h"

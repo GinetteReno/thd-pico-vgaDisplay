@@ -43,6 +43,7 @@ static inline pio_sm_config rgb_program_get_default_config(uint offset)
 
 static inline void rgb_program_init(PIO pio, uint sm, uint offset, uint pin)
 {
+    uint tmp;
     // creates state machine configuration object c, sets
     // to default configurations. I believe this function is auto-generated
     // and gets a name of <program name>_program_get_default_config
@@ -55,11 +56,10 @@ static inline void rgb_program_init(PIO pio, uint sm, uint offset, uint pin)
     // Set clock division (Commented out, this one runs at full speed)
     // sm_config_set_clkdiv(&c, 5) ;
     // Set this pin's GPIO function (connect PIO to the pad)
-    pio_gpio_init(pio, pin);
-    pio_gpio_init(pio, pin + 1);
-    pio_gpio_init(pio, pin + 2);
+    for(tmp = 0; tmp < 24; tmp++)
+        pio_gpio_init(pio, pin + tmp);
     // Set the pin direction to output at the PIO (3 pins)
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 3, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 24, true);
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
     // Set the state machine running (commented out, I'll start this in the C)

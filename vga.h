@@ -1,10 +1,11 @@
 #ifndef _VGA_H
 #define _VGA_H
+#include "pico/stdlib.h"
 
 #define VGA_BGR 1
 
 // Length of the pixel array, and number of DMA transfers
-#define TXCOUNT 153600 // Total pixels/2 (since we have 2 pixels per byte)
+#define TXCOUNT 76800 // Total pixels
 
 #if VGA_BGR
 #define BLACK 0b0
@@ -29,6 +30,8 @@ void VGA_writePixel(int x, int y, char color);
 void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin);
 
 void VGA_fillScreen(uint16_t color);
+
+void VGA_drawFrame(void *src);
 
 void dma_memset(void *dest, uint8_t val, size_t num);
 void dma_memcpy(void *dest, void *src, size_t num);

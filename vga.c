@@ -31,13 +31,13 @@
 #include "vsync.pio.h"
 #include "rgb.pio.h"
 
-#define H_ACTIVE 655   // (active + frontporch - 1) - one cycle delay for mov
-#define V_ACTIVE 479   // (active - 1)
-#define RGB_ACTIVE 319 // (horizontal active)/2 - 1
-// #define RGB_ACTIVE 639 // change to this if 1 pixel/byte
+#define H_ACTIVE 339   // (active + frontporch - 1) - one cycle delay for mov
+#define V_ACTIVE 239   // (active - 1)
+//#define RGB_ACTIVE 159 // (horizontal active)/2 - 1
+ #define RGB_ACTIVE 319 // change to this if 1 pixel/byte
 
-uint16_t _width = 640;
-uint16_t _height = 480;
+uint16_t _width = 320;
+uint16_t _height = 240;
 
 // Pixel color array that is DMA's to the PIO machines and
 // a pointer to the ADDRESS of this color array.
@@ -231,4 +231,10 @@ void dma_memcpy(void *dest, void *src, size_t num)
 void VGA_fillScreen(uint16_t color)
 {
     dma_memset(vga_data_array, (color) | (color << 3), TXCOUNT);
+}
+
+
+void VGA_drawFrame(void *src)
+{
+    dma_memcpy(vga_data_array, src, TXCOUNT);
 }
