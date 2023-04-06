@@ -27,7 +27,7 @@
 #define WHITE 7
 #endif
 void VGA_writePixel(int x, int y, char color);
-void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin);
+void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin, uint pclk_pin);
 
 void VGA_fillScreen(uint16_t color);
 

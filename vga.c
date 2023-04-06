@@ -27,14 +27,19 @@
 
 #include "vga.h"
 
-#include "hsync.pio.h"
-#include "vsync.pio.h"
-#include "rgb.pio.h"
+// #include "hsync.pio.h"
+// #include "vsync.pio.h"
+// #include "rgb.pio.h"
+#include "../thd_hsync.pio.h"
+#include "../thd_vsync.pio.h"
+#include "../thd_rgb.pio.h"
+#include "../thd_pclk.pio.h"
 
+#define CLK_PULSE 10
 #define H_ACTIVE 339   // (active + frontporch - 1) - one cycle delay for mov
-#define V_ACTIVE 239   // (active - 1)
-//#define RGB_ACTIVE 159 // (horizontal active)/2 - 1
- #define RGB_ACTIVE 319 // change to this if 1 pixel/byte
+#define V_ACTIVE_PLUS_FRONT 243   // (active - 1)
+
+#define RGB_ACTIVE 319 // change to this if 1 pixel/byte
 
 uint16_t _width = 320;
 uint16_t _height = 240;
@@ -48,7 +53,7 @@ char *address_pointer = &vga_data_array[0];
 // DMA channel for dma_memcpy and dma_memset
 int memcpy_dma_chan;
 
-void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin)
+void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin, uint pclk_pin)
 {
     // Choose which PIO instance to use (there are two instances, each with 4 state machines)
     PIO pio = pio1;
@@ -63,14 +68,18 @@ void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin)
     //
     // The program name comes from the .program part of the pio file
     // and is of the form <program name_program>
-    uint hsync_offset = pio_add_program(pio, &hsync_program);
-    uint vsync_offset = pio_add_program(pio, &vsync_program);
-    uint rgb_offset = pio_add_program(pio, &rgb_program);
+    uint hsync_offset = pio_add_program(pio, &thd_hsync_program);
+    uint vsync_offset = pio_add_program(pio, &thd_vsync_program);
+    //uint pclk_offset = pio_add_program(pio, &thd_pclk_program);
+    uint rgb_offset = pio_add_program(pio, &thd_rgb_program);
+    
 
     // Manually select a few state machines from pio instance pio0.
     uint hsync_sm = 0;
     uint vsync_sm = 1;
-    uint rgb_sm = 2;
+    uint pclk_sm = 2;
+    uint rgb_sm = 3;
+    
 
     // Call the initialization functions that are defined within each PIO file.
     // Why not create these programs here? By putting the initialization function in
@@ -78,7 +87,9 @@ void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin)
     // is consolidated in one place. Here in the C, we then just import and use it.
     hsync_program_init(pio, hsync_sm, hsync_offset, hsync_pin);
     vsync_program_init(pio, vsync_sm, vsync_offset, vsync_pin);
+    //pclk_program_init(pio, pclk_sm, pclk_offset, pclk_pin);
     rgb_program_init(pio, rgb_sm, rgb_offset, r_pin);
+    
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     // ===========================-== DMA Data Channels =================================================
@@ -134,54 +145,20 @@ void VGA_initDisplay(uint vsync_pin, uint hsync_pin, uint r_pin)
     // that they retrieve in the first 'pull' instructions, before the .wrap_target directive
     // in the assembly. Each uses these values to initialize some counting registers.
     pio_sm_put_blocking(pio, hsync_sm, H_ACTIVE);
-    pio_sm_put_blocking(pio, vsync_sm, V_ACTIVE);
+    pio_sm_put_blocking(pio, vsync_sm, 239);//V_ACTIVE_PLUS_FRONT);
     pio_sm_put_blocking(pio, rgb_sm, RGB_ACTIVE);
 
     // Start the two pio machine IN SYNC
     // Note that the RGB state machine is running at full speed,
     // so synchronization doesn't matter for that one. But, we'll
     // start them all simultaneously anyway.
-    pio_enable_sm_mask_in_sync(pio, ((1u << hsync_sm) | (1u << vsync_sm) | (1u << rgb_sm)));
+    pio_enable_sm_mask_in_sync(pio, ((1u << hsync_sm) | (1u << vsync_sm) | (1u << rgb_sm)) | (1u << pclk_sm));
 
     // Start DMA channel 0. Once started, the contents of the pixel color array
     // will be continously DMA's to the PIO machines that are driving the screen.
     // To change the contents of the screen, we need only change the contents
     // of that array.
     dma_start_channel_mask((1u << rgb_chan_0));
-}
-
-// A function for drawing a pixel with a specified color.
-// Note that because information is passed to the PIO state machines through
-// a DMA channel, we only need to modify the contents of the array and the
-// pixels will be automatically updated on the screen.
-void VGA_writePixel(int x, int y, char color)
-{
-    // Range checks
-    if (x > 639)
-        x = 639;
-    if (x < 0)
-        x = 0;
-    if (y < 0)
-        y = 0;
-    if (y > 479)
-        y = 479;
-
-    // Which pixel is it?
-    int pixel = ((640 * y) + x);
-
-    // Is this pixel stored in the first 3 bits
-    // of the vga data array index, or the second
-    // 3 bits? Check, then mask.
-    if (pixel & 1)
-    {
-        vga_data_array[pixel >> 1] &= 0b00000111;
-        vga_data_array[pixel >> 1] |= (color << 3);
-    }
-    else
-    {
-        vga_data_array[pixel >> 1] &= 0b0111000;
-        vga_data_array[pixel >> 1] |= (color);
-    }
 }
 
 void dma_memset(void *dest, uint8_t val, size_t num)

@@ -51,15 +51,16 @@ static inline void rgb_program_init(PIO pio, uint sm, uint offset, uint pin)
     pio_sm_config c = rgb_program_get_default_config(offset);
     // Map the state machine's SET and OUT pin group to three pins, the `pin`
     // parameter to this function is the lowest one. These groups overlap.
-    sm_config_set_set_pins(&c, pin, 3);
-    sm_config_set_out_pins(&c, pin, 3);
+    //sm_config_set_set_pins(&c, pin, 3);
+    //sm_config_set_out_pins(&c, pin, 3);
     // Set clock division (Commented out, this one runs at full speed)
-    // sm_config_set_clkdiv(&c, 5) ;
+    uint16_t div = 10;
+    sm_config_set_clkdiv(&c, div) ;
     // Set this pin's GPIO function (connect PIO to the pad)
-    for(tmp = 0; tmp < 24; tmp++)
+    for(tmp = 0; tmp < 3; tmp++)
         pio_gpio_init(pio, pin + tmp);
     // Set the pin direction to output at the PIO (3 pins)
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 24, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 12, true);
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
     // Set the state machine running (commented out, I'll start this in the C)
